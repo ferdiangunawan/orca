@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { useRuntimeFileListForWorktree } from '../quick-open-file-list'
+import { prepareQuickOpenFiles } from '../quick-open-search'
 import { getTabEntryOptions, type TabCreateEntryArgs } from './tab-create-entry-action'
 import {
   findMatchingTabAgentLaunchOptions,
@@ -104,14 +105,17 @@ export default function TabBarCreateEntry({
     () => findMatchingTabCreateMenuOptions(query, menuOptions),
     [menuOptions, query]
   )
+  // Why: repositories can contain 100k files; rebuilding boundary metadata on
+  // every keystroke causes visible renderer stalls and avoidable GC pressure.
+  const indexedFiles = useMemo(() => prepareQuickOpenFiles(fileList.files), [fileList.files])
   const options = useMemo(() => {
-    const entryOptions = getTabEntryOptions(query, fileList)
+    const entryOptions = getTabEntryOptions(query, fileList, { indexedFiles })
     if (matchingMenuOptions.length === 0) {
       return entryOptions
     }
     // Why: a matched create-menu action should win over a generic new-file fallback.
     return entryOptions.filter((option) => option.classification.kind !== 'new-file')
-  }, [fileList, matchingMenuOptions.length, query])
+  }, [fileList, indexedFiles, matchingMenuOptions.length, query])
   const matchingAgentOptions = useMemo(
     () => findMatchingTabAgentLaunchOptions(query, agentOptions),
     [agentOptions, query]

@@ -1,4 +1,8 @@
-import { isQuickOpenQueryTooLarge, prepareQuickOpenFiles } from '../quick-open-search'
+import {
+  isQuickOpenQueryTooLarge,
+  prepareQuickOpenFiles,
+  type QuickOpenIndexedFile
+} from '../quick-open-search'
 import type { RuntimeFileListState } from '../quick-open-file-list'
 import { translate } from '@/i18n/i18n'
 import { findExistingFileMatches, isLikelyNewFileIntent } from './tab-create-entry-file-matches'
@@ -29,12 +33,17 @@ export type TabEntryOption = {
   id: string
 }
 
+type TabEntryOptionsConfig = {
+  indexedFiles?: readonly QuickOpenIndexedFile[]
+  limit?: number
+}
+
 export function classifyTabEntryQuery(
   query: string,
   fileList: RuntimeFileListState
 ): TabEntryClassification {
   return (
-    getTabEntryOptions(query, fileList, 1)[0]?.classification ?? {
+    getTabEntryOptions(query, fileList, { limit: 1 })[0]?.classification ?? {
       kind: 'empty',
       message: translate(
         'auto.components.tab.bar.tab.create.entry.classifier.5553b283ce',
@@ -47,7 +56,7 @@ export function classifyTabEntryQuery(
 export function getTabEntryOptions(
   query: string,
   fileList: RuntimeFileListState,
-  limit = 4
+  { indexedFiles, limit = 4 }: TabEntryOptionsConfig = {}
 ): TabEntryOption[] {
   if (isQuickOpenQueryTooLarge(query)) {
     return [
@@ -109,7 +118,7 @@ export function getTabEntryOptions(
   }
   const existingFiles = findExistingFileMatches(
     trimmed,
-    prepareQuickOpenFiles(fileList.files),
+    indexedFiles ?? prepareQuickOpenFiles(fileList.files),
     Math.max(limit, 1)
   )
   const exactExistingFiles = existingFiles.filter((file) => file.matchKind !== 'fuzzy')
